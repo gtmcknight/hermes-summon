@@ -1,0 +1,67 @@
+name: summon
+label: X
+kind: platform
+version: 0.1.0
+requires_hermes: ">=0.23"
+description: >
+  Your own @grok on X that learns. Tag your bot under any post and your Hermes
+  answers in the thread with your model and memory. Say "learn this" under a
+  how-to thread and it saves the thread as a skill you approve. Only you (and
+  handles you allow) can summon it: it searches for your posts by user ID, so
+  nobody else's posts are read, reach the agent, or cost you money.
+author: Taylor McKnight
+requires_env:
+  - name: X_BOT_OWNER
+    description: "Your X handle. Only this account's posts can summon the bot"
+    prompt: "Your X handle"
+    password: false
+optional_env:
+  - name: X_BOT_RELAY_KEY
+    description: "Free-trial key from the summon relay. Get one with: hermes gateway setup summon"
+    prompt: "Summon trial key"
+    password: true
+  - name: X_BOT_API_KEY
+    description: "Your own X app's consumer key, for after the trial. hermes gateway setup summon walks you through it"
+    prompt: "X app consumer key"
+    url: "https://console.x.com"
+    password: true
+  - name: X_BOT_API_SECRET
+    description: "Your own X app's secret key"
+    prompt: "X app secret key"
+    password: true
+  - name: X_BOT_ACCESS_TOKEN
+    description: "The bot's access token, from console.x.com > your app > Keys and tokens while signed in as the bot"
+    prompt: "Bot access token"
+    password: true
+  - name: X_BOT_ACCESS_SECRET
+    description: "The bot's access token secret"
+    prompt: "Bot access token secret"
+    password: true
+  - name: X_BOT_ALLOWED_USERS
+    description: "More X handles allowed to summon the bot, comma-separated (own keys only)"
+    prompt: "Other handles allowed to summon it"
+    password: false
+  - name: X_BOT_POLL_SECONDS
+    description: "How often to check X for summons, in seconds (default 20, minimum 15)"
+    prompt: "Seconds between checks"
+    password: false
+  - name: X_BOT_POST_LIMIT
+    description: "Characters per post. Leave it empty: each answer is one long post, and the bot switches to 280 the first time X refuses one"
+    prompt: "Characters per post"
+    password: false
+  - name: X_BOT_DAILY_BUDGET
+    description: "Own keys: most the bot may spend on X in a day, in US dollars (default 1.00)"
+    prompt: "Daily X spend cap (USD)"
+    password: false
+  - name: X_BOT_DRY_RUN
+    description: "true = read and answer, but log replies instead of posting them"
+    prompt: "Dry run? (true/false)"
+    password: false
+  - name: X_BOT_TIMEZONE
+    description: "IANA time zone for dates the agent sees, e.g. America/New_York (default: this machine's)"
+    prompt: "Time zone"
+    password: false
+  - name: X_BOT_RELAY_URL
+    description: "Summon relay address (default https://summon.taylor.fyi)"
+    prompt: "Relay URL"
+    password: false

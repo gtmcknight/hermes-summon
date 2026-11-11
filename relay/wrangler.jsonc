@@ -1,0 +1,20 @@
+{
+  // Summon relay: the free trial for the summon Hermes plugin. Secrets: X_CLIENT_ID, X_CLIENT_SECRET
+  // (wrangler secret put). PUBLIC_ORIGIN must match the callback URL registered on the X app.
+  "name": "summon-relay",
+  "account_id": "4bb301c030d011f1d7869920fbe8c606",
+  "routes": [{ "pattern": "summon.taylor.fyi", "custom_domain": true }],
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "durable_objects": { "bindings": [{ "name": "STORE", "class_name": "Store" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Store"] }],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://summon.taylor.fyi",
+    "FREE_REPLIES": "10",
+    "TRIAL_POOL": "2000",
+    "READS_PER_DAY": "1500",
+    "READS_POOL_PER_DAY": "20000"
+  },
+  // Errors only: no per-request logs, so bot keys and summons never sit in Cloudflare's log store.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } }
+}
