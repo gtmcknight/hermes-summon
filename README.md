@@ -14,11 +14,15 @@ For the hackathon judges, or anyone with a Hermes and an X account:
 
 ```
 hermes plugins install https://github.com/gtmcknight/hermes-summon
-hermes plugins enable summon
+```
+
+It asks for your X handle, then "Enable summon now?": say y. Then:
+
+```
 hermes gateway setup
 ```
 
-Choose **X**, type your X handle, pick **Borrow @taybotfyi**, and enter the invite code `judge-hermes`. Start `hermes gateway`, then reply to any post with `@taybotfyi is this true?` Your own Hermes answers as @taybotfyi under your post. Five replies, under your own posts only, each one checked by a moderation model before it goes out.
+Choose **X**, pick **Borrow @taybotfyi**, and enter the invite code `judge-hermes`. Start `hermes gateway`, then reply to any post with `@taybotfyi is this true?` Your own Hermes answers as @taybotfyi under your post. Five replies, under your own posts only, each one checked by a moderation model before it goes out.
 
 The film: [summon.taylor.fyi](https://summon.taylor.fyi).
 
@@ -32,7 +36,7 @@ You need Hermes 0.23 or newer and a second X account for the bot.
    hermes plugins install summon
    ```
 
-   Until it's in the catalog: `hermes plugins install https://github.com/gtmcknight/hermes-summon`, then `hermes plugins enable summon`.
+   Until it's in the catalog: `hermes plugins install https://github.com/gtmcknight/hermes-summon`. It asks for your X handle and offers to enable the plugin.
 
 2. Run setup and choose **X**. Enter your handle and pick the free trial, then open the link it prints on any device, signed in to X as the bot. No bot account yet? Pick "Borrow @taybotfyi" and enter the invite code from the hackathon entry: your Hermes answers as @taybotfyi under your own posts, 5 replies, no sign-in.
 

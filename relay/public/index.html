@@ -33,6 +33,9 @@ h1{font-family:"Rubik Glitch","Avenir Next Condensed",sans-serif;font-size:clamp
  font:500 clamp(15px,1.2vw,19px)/1.6 var(--mono);color:#fff}
 .install pre{margin:0;white-space:pre-wrap;word-break:break-all;flex:1;font:inherit}
 .install button{font:inherit;background:#fff;color:#000;border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
+.steps{margin:18px 0 0 22px;padding:0;font-size:clamp(18px,1.4vw,22px);line-height:1.45;color:var(--ink)}
+.steps li{margin:8px 0}
+.steps code{font-family:var(--mono);font-size:.9em;background:#0007;padding:2px 7px;border-radius:6px}
 .soon{margin-top:14px;font-size:clamp(17px,1.3vw,21px);color:var(--soft);line-height:1.5}
 .soon code{font-family:var(--mono);color:var(--ink);font-size:.92em}
 .links{margin-top:28px;display:flex;gap:28px;flex-wrap:wrap;font-size:clamp(18px,1.4vw,22px);font-weight:500}
@@ -64,10 +67,13 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
       <div><b>Find anything.</b><span>Example: six events, no links. "Find the RSVP links." Every link came back in one reply. <a href="https://x.com/taybotfyi/status/2120571351748448581">See it on X</a></span></div>
       <div><b>Learn anything.</b><span>Example: "learn this" under a five-minute how-to video. It watched it and wrote a skill you approve. <a href="https://x.com/taybotfyi/status/2120572441500008691">See it on X</a></span></div>
     </div>
-    <div class="install"><pre id="cmd">hermes plugins install https://github.com/gtmcknight/hermes-summon
-hermes plugins enable summon
-hermes gateway setup</pre><button id="copy" type="button">Copy</button></div>
-    <p class="soon">In setup, choose X, then "Borrow @taybotfyi" with the invite code from the hackathon entry. Once the catalog PR merges, it's just <code>hermes plugins install summon</code>.</p>
+    <div class="install"><pre id="cmd">hermes plugins install https://github.com/gtmcknight/hermes-summon</pre><button id="copy" type="button">Copy</button></div>
+    <ol class="steps">
+      <li>Run that. It asks for your X handle, then "Enable summon now?" Say y.</li>
+      <li>Run <code>hermes gateway setup</code>, choose <b>X</b>, pick <b>Borrow @taybotfyi</b>, enter the invite code from the hackathon entry.</li>
+      <li>Run <code>hermes gateway</code>, then reply to any post with <code>@taybotfyi is this true?</code></li>
+    </ol>
+    <p class="soon">Once the catalog PR merges, step one is just <code>hermes plugins install summon</code>.</p>
     <div class="links">
       <a href="https://github.com/gtmcknight/hermes-summon">Source and README</a>
       <a href="https://github.com/gtmcknight/hermes-summon#what-it-costs">Free trial, then your own X app</a>
