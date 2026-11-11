@@ -146,8 +146,27 @@ def main():
         check(not r.success, "but not under anyone else's post")
         r = await a.send("600", "Hey @someone look", reply_to="600")
         check(not r.success, "and never with an @mention")
+        r = await a.send("600", "I will find where you live and hurt you.", reply_to="600")
+        check(not r.success, "a threatening reply is held by moderation")
 
     asyncio.run(run_borrowed())
+
+    # The switches: ban one borrower, then switch borrowing off for everyone
+    adm = {"Authorization": "Bearer test-admin", "Content-Type": "application/json"}
+    http = UrllibHTTP()
+    st = json.loads(asyncio.run(http.request("GET", RELAY + "/admin/borrow", adm)).text)
+    check(st.get("given") == 1 and st.get("held", 0) >= 1 and st["borrowers"][0]["owner"] == "judge1", "admin status lists the borrower, replies given and held")
+    asyncio.run(http.request("POST", RELAY + "/admin/ban", adm, json.dumps({"owner": "judge1", "banned": True})))
+    hdr2 = {"Authorization": f"Bearer {borrowed['key']}", "Content-Type": "application/json"}
+    r = asyncio.run(http.request("POST", RELAY + "/v1/x", hdr2, json.dumps({"method": "GET", "path": "/2/users/me"})))
+    check(r.status_code == 403, f"a banned borrower's key stops working ({r.status_code})")
+    asyncio.run(http.request("POST", RELAY + "/admin/ban", adm, json.dumps({"owner": "judge1", "banned": False})))
+    asyncio.run(http.request("POST", RELAY + "/admin/borrow", adm, json.dumps({"off": True})))
+    r = asyncio.run(http.request("POST", RELAY + "/v1/x", hdr2, json.dumps({"method": "GET", "path": "/2/users/me"})))
+    check(r.status_code == 403, f"the mass switch stops every borrowed key ({r.status_code})")
+    check(setup.trial("judge1", RELAY, lines.append, borrow=True, code="hermes-judge") is None, "and no one can borrow while it's off")
+    r = asyncio.run(http.request("GET", RELAY + "/admin/borrow", {"Authorization": "Bearer nope"}))
+    check(r.status_code == 404, "the admin routes don't exist without the key")
     with urllib.request.urlopen(FAKE_X + "/replies") as r:
         st = json.loads(r.read())
     check(len(st["replies"]) == 3, f"X got exactly 3 replies ({len(st['replies'])})")

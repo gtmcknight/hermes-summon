@@ -8,6 +8,7 @@
   "assets": { "directory": "./public" },
   "compatibility_date": "2026-09-01",
   "durable_objects": { "bindings": [{ "name": "STORE", "class_name": "Store" }] },
+  "ai": { "binding": "AI", "remote": true },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Store"] }],
   "vars": {
     "PUBLIC_ORIGIN": "https://summon.taylor.fyi",

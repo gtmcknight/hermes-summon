@@ -64,6 +64,7 @@ export class Store extends DurableObject {
       owner_id TEXT, owner_handle TEXT, access TEXT, refresh TEXT, expires INTEGER, free_left INTEGER,
       day TEXT, reads INTEGER, created INTEGER)`);
     // Borrowed keys: a row whose token_of names the bot_id of the signed-in row that holds the X tokens.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS bans (owner TEXT PRIMARY KEY, created INTEGER)');
     if (!this.sql.exec("SELECT 1 FROM pragma_table_info('bots') WHERE name = 'token_of'").toArray().length) {
       this.sql.exec('ALTER TABLE bots ADD COLUMN token_of TEXT');
     }
@@ -91,6 +92,7 @@ export class Store extends DurableObject {
       if (req.method === 'GET' && (m = p.match(/^\/auth\/([A-Z0-9-]{9})$/))) return await this.auth(m[1], origin);
       if (req.method === 'GET' && p === '/callback') return await this.callback(url, origin);
       if (req.method === 'POST' && (m = p.match(/^\/v1\/pair\/([\w-]{20,40})\/claim$/))) return this.claim(m[1]);
+      if (p.startsWith('/admin/')) return await this.admin(req, p);
       if (p.startsWith('/v1/')) {
         const bot = await this.bot(req);
         if (!bot) return json({ error: 'unauthorized', message: 'Unknown summon key. Run: hermes gateway setup summon' }, 401);
@@ -133,7 +135,41 @@ export class Store extends DurableObject {
   // The demo path: no bot account needed. The owner's Hermes answers as the shared bot (BORROW_BOT, signed in
   // once by its owner) under the owner's own posts only, for BORROW_FREE replies. The key gets no tokens of its
   // own; the proxy uses the signed-in row's, so a refresh never races between borrowers.
+  borrowOff() { return !this.env.BORROW_BOT || this.meta('borrow_off') === '1'; }
+  banned(handle) { return !!this.sql.exec('SELECT 1 FROM bans WHERE owner = ?', String(handle || '').toLowerCase()).toArray().length; }
+  switchedOff(bot) {
+    if (!bot.token_of || !(this.borrowOff() || this.banned(bot.owner_handle))) return null;
+    return json({ error: 'borrow_off', message: 'The shared bot is switched off for this account. Sign in with your own bot account.' }, 403);
+  }
+
+  // Taylor's switches: GET /admin/borrow (status), POST /admin/borrow {off}, POST /admin/ban {owner, banned}.
+  async admin(req, p) {
+    const key = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'not_found' }, 404);
+    if (p === '/admin/borrow' && req.method === 'POST') {
+      const { off } = await req.json().catch(() => ({}));
+      this.setMeta('borrow_off', off ? '1' : '0');
+    }
+    if (p === '/admin/ban' && req.method === 'POST') {
+      const { owner, banned = true } = await req.json().catch(() => ({}));
+      const h = String(owner || '').replace(/^@/, '').toLowerCase();
+      if (!HANDLE.test(h)) return json({ error: 'bad_owner' }, 400);
+      if (banned) {
+        this.sql.exec('INSERT OR REPLACE INTO bans (owner, created) VALUES (?, ?)', h, Date.now());
+        this.sql.exec('UPDATE bots SET free_left = 0 WHERE lower(owner_handle) = ? AND token_of IS NOT NULL', h);
+      } else {
+        this.sql.exec('DELETE FROM bans WHERE owner = ?', h);
+      }
+    }
+    const borrowers = this.sql.exec('SELECT owner_handle, free_left, day, reads FROM bots WHERE token_of IS NOT NULL ORDER BY created DESC').toArray()
+      .map((b) => ({ owner: b.owner_handle, free_left: b.free_left, reads_today: b.day === today() ? b.reads : 0, banned: this.banned(b.owner_handle) }));
+    return json({ off: this.borrowOff(), given: this.meta('borrowed_given') | 0, held: this.meta('borrowed_held') | 0,
+      pool: Number(this.env.BORROW_POOL || 200), bans: this.sql.exec('SELECT owner FROM bans').toArray().map((b) => b.owner), borrowers });
+  }
+
   async borrow(handle, invite) {
+    if (this.borrowOff()) return json({ error: 'borrow_off', message: 'Borrowing is switched off. Sign in with your own bot account.' }, 403);
+    if (this.banned(handle)) return json({ error: 'banned', message: 'This account can\'t borrow the shared bot.' }, 403);
     const shared = String(this.env.BORROW_BOT || '').replace(/^@/, '').toLowerCase();
     if (this.env.BORROW_CODE && invite !== this.env.BORROW_CODE) {
       return json({ error: 'bad_code', message: 'Borrowing needs the invite code from the hackathon entry.' }, 403);
@@ -308,6 +344,8 @@ export class Store extends DurableObject {
 
   // Exactly the calls summon makes. Anything else is refused, so a key can't be used as a general X client.
   async proxy(bot, req) {
+    const off = this.switchedOff(bot);
+    if (off) return off;
     const trialOver = json({
       error: 'trial_over',
       message: `@${bot.bot_handle} used its ${this.free} free replies. Add your own X keys: hermes gateway setup summon`,
@@ -355,10 +393,19 @@ export class Store extends DurableObject {
       }
       if (author !== bot.owner_id) return json({ error: 'refused', message: `summon only replies under @${bot.owner_handle}'s posts` }, 403);
       if (bot.token_of) {
-        if (/(^|[^\w])@\w/.test(String(body.text || ''))) {
+        const reply = String(body.text || '');
+        if (/(^|[^\w])@\w/.test(reply)) {
           return json({ error: 'refused', message: 'a borrowed bot never @mentions anyone' }, 403);
         }
+        if (/sk_summon_|sk-ant-|sk-[A-Za-z0-9]{20}|AKIA[0-9A-Z]{16}|-----BEGIN|gh[pousr]_[A-Za-z0-9]{30}/.test(reply)) {
+          return json({ error: 'refused', message: 'that reply looks like it holds a key' }, 403);
+        }
         if ((this.meta('borrowed_given') | 0) >= Number(this.env.BORROW_POOL || 200)) return trialOver;
+        const verdict = await this.moderate(reply);
+        if (!verdict.safe) {
+          this.setMeta('borrowed_held', (this.meta('borrowed_held') | 0) + 1);
+          return json({ error: 'held', message: `held back by moderation (${verdict.why})`, categories: verdict.categories }, 403);
+        }
       }
       const res = await this.x(bot, 'POST', '/2/tweets', undefined, body);
       const text = await res.text();
@@ -377,7 +424,29 @@ export class Store extends DurableObject {
     return json({ error: 'refused', message: `summon doesn't call ${method} ${path}` }, 403);
   }
 
+  // Borrowed replies pass Llama Guard (Workers AI) before they post as the shared bot. Fails closed:
+  // when the model can't be reached, the reply is held, never posted unchecked.
+  async moderate(text) {
+    if (!this.env.AI) return { safe: !!this.env.MODERATION_OFF, why: 'no moderation model', categories: [] };
+    try {
+      const out = await this.env.AI.run('@cf/meta/llama-guard-3-8b', {
+        messages: [{ role: 'user', content: 'Reply to a post on X:\n\n' + text }],
+      });
+      const r = out?.response;
+      if (r && typeof r === 'object') return { safe: r.safe !== false, why: (r.categories || []).join(', ') || 'flagged', categories: r.categories || [] };
+      const line = String(r || '').trim();
+      const safe = /^safe\b/i.test(line);
+      const categories = safe ? [] : line.split(/\s+/).filter((w) => /^S\d+$/.test(w));
+      return { safe, why: categories.join(', ') || (safe ? '' : 'flagged'), categories };
+    } catch (e) {
+      console.error('moderation failed', e);
+      return { safe: false, why: 'moderation unavailable', categories: [] };
+    }
+  }
+
   async media(bot, req) {
+    const off = this.switchedOff(bot);
+    if (off) return off;
     if (bot.free_left <= 0) return json({ error: 'trial_over' }, 402);
     const size = Number(req.headers.get('content-length') || 0);
     if (!size || size > MAX_MEDIA + 64 * 1024) return json({ error: 'refused', message: 'images up to 5 MB' }, 413);
