@@ -2,9 +2,25 @@
 
 Your own @grok on X that learns, run by your Hermes.
 
+![summon](docs/banner.png)
+
 Tag your bot under any post and ask it something. Your Hermes reads the thread, its photos and the posts it quotes, then answers in the thread with your model, your memory and the tools you allow. Say "learn this" under a how-to thread and your agent keeps it as a skill, once you approve it.
 
 Only you can summon it. A stranger tagging your bot never reaches your agent or your X bill.
+
+## Try it in a minute, no bot account needed
+
+For the hackathon judges, or anyone with a Hermes and an X account:
+
+```
+hermes plugins install https://github.com/gtmcknight/hermes-summon
+hermes plugins enable summon
+hermes gateway setup summon
+```
+
+Type your X handle, pick **Borrow @taybotfyi**, and enter the invite code `judge-hermes`. Start `hermes gateway`, then reply to any post with `@taybotfyi is this true?` Your own Hermes answers as @taybotfyi under your post. Five replies, under your own posts only, each one checked by a moderation model before it goes out.
+
+The film: [summon.taylor.fyi](https://summon.taylor.fyi).
 
 ## Set it up in two minutes
 
