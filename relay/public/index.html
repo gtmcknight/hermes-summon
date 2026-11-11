@@ -33,6 +33,8 @@ h1{font-family:"Rubik Glitch","Avenir Next Condensed",sans-serif;font-size:clamp
  font:500 clamp(16px,1.3vw,21px)/1 var(--mono);color:#fff}
 .install code{white-space:nowrap}
 .install button{font:inherit;background:#fff;color:#000;border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
+.soon{margin-top:14px;font-size:clamp(17px,1.3vw,21px);color:var(--soft);line-height:1.5}
+.soon code{font-family:var(--mono);color:var(--ink);font-size:.92em}
 .links{margin-top:28px;display:flex;gap:28px;flex-wrap:wrap;font-size:clamp(18px,1.4vw,22px);font-weight:500}
 .links a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6;padding-bottom:2px}
 .links a:hover{border-color:#fff}
@@ -46,7 +48,7 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
  .lead br{display:none}
  .verbs div{display:block}
  .verbs b{display:block;margin-bottom:4px}
- .install{display:flex;width:100%;justify-content:space-between;font-size:14px;padding:14px 14px}
+ .install{display:flex;width:100%;justify-content:space-between;font-size:13px;padding:14px 14px;gap:10px}
  .install code{white-space:normal}
  .film{width:min(100%,360px);margin:36px auto 0}
  footer{padding:0 20px 32px}
@@ -63,7 +65,8 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
       <div><b>Find anything.</b><span>Example: six events, no links. "Find the RSVP links." Every link came back in one reply. <a href="https://x.com/taybotfyi/status/2120571351748448581">See it on X</a></span></div>
       <div><b>Learn anything.</b><span>Example: "learn this" under a five-minute how-to video. It watched it and wrote a skill you approve. <a href="https://x.com/taybotfyi/status/2120572441500008691">See it on X</a></span></div>
     </div>
-    <div class="install"><code id="cmd">hermes plugins install summon</code><button id="copy" type="button">Copy</button></div>
+    <div class="install"><code id="cmd">hermes plugins install https://github.com/gtmcknight/hermes-summon</code><button id="copy" type="button">Copy</button></div>
+    <p class="soon">Then <code>hermes plugins enable summon</code> and <code>hermes gateway setup summon</code>. Once the catalog PR merges: <code>hermes plugins install summon</code>.</p>
     <div class="links">
       <a href="https://github.com/gtmcknight/hermes-summon">Source and README</a>
       <a href="https://github.com/gtmcknight/hermes-summon#what-it-costs">Free trial, then your own X app</a>
