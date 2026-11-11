@@ -16,7 +16,8 @@
     "READS_PER_DAY": "1500",
     "READS_POOL_PER_DAY": "20000",
     "BORROW_BOT": "taybotfyi",
-    "BORROW_FREE": "10"
+    "BORROW_FREE": "5",
+    "BORROW_POOL": "200"
   },
   // Errors only: no per-request logs, so bot keys and summons never sit in Cloudflare's log store.
   "observability": { "enabled": true, "logs": { "invocation_logs": false } }

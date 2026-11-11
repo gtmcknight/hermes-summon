@@ -127,7 +127,8 @@ def main():
     asyncio.run(run())
 
     # Borrowing: a judge with no bot account gets a key for the shared bot, under their own posts only
-    borrowed = setup.trial("judge1", RELAY, lines.append, borrow=True)
+    check(setup.trial("judge1", RELAY, lines.append, borrow=True, code="wrong") is None, "borrowing needs the invite code")
+    borrowed = setup.trial("judge1", RELAY, lines.append, borrow=True, code="hermes-judge")
     check(borrowed and borrowed.get("bot") == "taybotfyi" and borrowed.get("owner") == "judge1", "a judge borrows @taybotfyi with no sign-in")
     os.environ.update({"X_BOT_OWNER": "judge1", "X_BOT_RELAY_KEY": borrowed["key"]})
 
@@ -143,6 +144,8 @@ def main():
         check(r.success, "the judge's Hermes replies as @taybotfyi under the judge's post")
         r = await a.send("500", "Nope.", reply_to="501")
         check(not r.success, "but not under anyone else's post")
+        r = await a.send("600", "Hey @someone look", reply_to="600")
+        check(not r.success, "and never with an @mention")
 
     asyncio.run(run_borrowed())
     with urllib.request.urlopen(FAKE_X + "/replies") as r:

@@ -114,13 +114,13 @@ export class Store extends DurableObject {
   // ── sign-in ───────────────────────────────────────────────────────────────
 
   async pair(req, origin) {
-    const { owner, borrow } = await req.json().catch(() => ({}));
+    const { owner, borrow, code: invite } = await req.json().catch(() => ({}));
     const handle = String(owner || '').replace(/^@/, '');
     if (!HANDLE.test(handle)) return json({ error: 'bad_owner', message: 'owner must be an X handle' }, 400);
     if (Number(this.meta('replies_given')) >= Number(this.env.TRIAL_POOL || 2000)) {
       return json({ error: 'trial_closed', message: 'The free trial is full. Use your own X keys.' }, 403);
     }
-    if (borrow) return await this.borrow(handle);
+    if (borrow) return await this.borrow(handle, String(invite || ''));
     this.sql.exec('DELETE FROM pairs WHERE created < ?', Date.now() - PAIR_TTL);
     if (this.sql.exec('SELECT COUNT(*) AS n FROM pairs').toArray()[0].n >= 500) {
       return json({ error: 'busy', message: 'Too many sign-ins in progress. Try again in a few minutes.' }, 429);
@@ -133,8 +133,14 @@ export class Store extends DurableObject {
   // The demo path: no bot account needed. The owner's Hermes answers as the shared bot (BORROW_BOT, signed in
   // once by its owner) under the owner's own posts only, for BORROW_FREE replies. The key gets no tokens of its
   // own; the proxy uses the signed-in row's, so a refresh never races between borrowers.
-  async borrow(handle) {
+  async borrow(handle, invite) {
     const shared = String(this.env.BORROW_BOT || '').replace(/^@/, '').toLowerCase();
+    if (this.env.BORROW_CODE && invite !== this.env.BORROW_CODE) {
+      return json({ error: 'bad_code', message: 'Borrowing needs the invite code from the hackathon entry.' }, 403);
+    }
+    if ((this.meta('borrowed_given') | 0) >= Number(this.env.BORROW_POOL || 200)) {
+      return json({ error: 'borrow_closed', message: 'The shared bot has given all its demo replies. Sign in with your own bot account.' }, 403);
+    }
     const primary = shared && this.sql.exec(
       'SELECT * FROM bots WHERE lower(bot_handle) = ? AND token_of IS NULL ORDER BY created DESC LIMIT 1', shared).toArray()[0];
     if (!primary) return json({ error: 'no_borrow', message: 'Borrowing a bot is not available right now. Sign in with your own bot account.' }, 503);
@@ -348,12 +354,19 @@ export class Store extends DurableObject {
         return json({ error: 'gone', message: 'the post that summoned the bot is gone (deleted or hidden), so nothing was posted' }, 404);
       }
       if (author !== bot.owner_id) return json({ error: 'refused', message: `summon only replies under @${bot.owner_handle}'s posts` }, 403);
+      if (bot.token_of) {
+        if (/(^|[^\w])@\w/.test(String(body.text || ''))) {
+          return json({ error: 'refused', message: 'a borrowed bot never @mentions anyone' }, 403);
+        }
+        if ((this.meta('borrowed_given') | 0) >= Number(this.env.BORROW_POOL || 200)) return trialOver;
+      }
       const res = await this.x(bot, 'POST', '/2/tweets', undefined, body);
       const text = await res.text();
       if (res.ok) {
         bot.free_left -= 1;
         this.sql.exec('UPDATE bots SET free_left = ? WHERE key_hash = ?', bot.free_left, bot.key_hash);
         this.setMeta('replies_given', (this.meta('replies_given') | 0) + 1);
+        if (bot.token_of) this.setMeta('borrowed_given', (this.meta('borrowed_given') | 0) + 1);
       }
       return new Response(text, { status: res.status, headers: { 'content-type': 'application/json', 'x-summon-free-left': String(bot.free_left) } });
     }
