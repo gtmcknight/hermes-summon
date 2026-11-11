@@ -37,6 +37,7 @@ h1{font-family:"Rubik Glitch","Avenir Next Condensed",sans-serif;font-size:clamp
 .steps li{margin:8px 0}
 .steps code,.soon code{font-family:var(--mono);font-size:.9em;background:#0007;padding:2px 7px;border-radius:6px;cursor:pointer;word-break:break-all}
 .steps code:hover,.soon code:hover{background:#000b}
+.steps code.copied,.soon code.copied{background:#fff;color:#000}
 .soon{margin-top:14px;font-size:clamp(17px,1.3vw,21px);color:var(--soft);line-height:1.5}
 .soon code{font-family:var(--mono);color:var(--ink);font-size:.92em}
 .try{max-width:1500px;margin:0 auto;padding:24px 64px 72px}
@@ -94,7 +95,7 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
 <script>
 for (const c of document.querySelectorAll('.steps code, .soon code')) {
   c.title = 'Click to copy'; c.style.cursor = 'pointer';
-  c.onclick = async () => { const t = c.textContent; try { await navigator.clipboard.writeText(t); const was = c.textContent; c.textContent = 'Copied'; setTimeout(() => c.textContent = was, 1200); } catch { } };
+  c.onclick = async () => { try { await navigator.clipboard.writeText(c.textContent); c.classList.add('copied'); setTimeout(() => c.classList.remove('copied'), 900); } catch { } };
 }
 </script>
 </body>
