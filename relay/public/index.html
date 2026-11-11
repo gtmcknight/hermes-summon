@@ -35,7 +35,8 @@ h1{font-family:"Rubik Glitch","Avenir Next Condensed",sans-serif;font-size:clamp
 .install button{font:inherit;background:#fff;color:#000;border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
 .steps{margin:18px 0 0 22px;padding:0;font-size:clamp(18px,1.4vw,22px);line-height:1.45;color:var(--ink)}
 .steps li{margin:8px 0}
-.steps code{font-family:var(--mono);font-size:.9em;background:#0007;padding:2px 7px;border-radius:6px}
+.steps code,.soon code{font-family:var(--mono);font-size:.9em;background:#0007;padding:2px 7px;border-radius:6px;cursor:pointer}
+.steps code:hover,.soon code:hover{background:#000b}
 .soon{margin-top:14px;font-size:clamp(17px,1.3vw,21px);color:var(--soft);line-height:1.5}
 .soon code{font-family:var(--mono);color:var(--ink);font-size:.92em}
 .try{max-width:1500px;margin:0 auto;padding:24px 64px 72px}
@@ -93,6 +94,10 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
   </section>
 <footer>Only you can summon your bot: it reads your posts by user ID, so strangers never reach your agent or your bill. Summons get web, images, video and skills, never your terminal or files. A Hermes Agent plugin by <a href="https://taylor.fyi">Taylor McKnight</a>.</footer>
 <script>
+for (const c of document.querySelectorAll('.steps code, .soon code')) {
+  c.title = 'Click to copy'; c.style.cursor = 'pointer';
+  c.onclick = async () => { const t = c.textContent; try { await navigator.clipboard.writeText(t); const was = c.textContent; c.textContent = 'Copied'; setTimeout(() => c.textContent = was, 1200); } catch { } };
+}
 document.getElementById('copy').onclick=async()=>{const b=document.getElementById('copy');try{await navigator.clipboard.writeText(document.getElementById('cmd').textContent);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)}catch{b.textContent='Select it'}};
 </script>
 </body>
