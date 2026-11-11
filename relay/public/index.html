@@ -8,6 +8,8 @@
 <meta property="og:title" content="summon">
 <meta property="og:description" content="Your Hermes, under any post on X. Check anything. Find anything. Learn anything.">
 <meta property="og:image" content="https://summon.taylor.fyi/poster.jpg">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="twitter:card" content="player">
 <meta name="twitter:player" content="https://summon.taylor.fyi/summon.mp4">
 <meta name="twitter:player:width" content="1080">
@@ -36,8 +38,9 @@ h1{font-family:"Rubik Glitch","Avenir Next Condensed",sans-serif;font-size:clamp
 .steps{margin:26px 0 0 22px;padding:0;font-size:clamp(18px,1.4vw,22px);line-height:1.45;color:var(--ink)}
 .steps li{margin:8px 0}
 .steps code,.soon code{font-family:var(--mono);font-size:.9em;background:#0007;padding:2px 7px;border-radius:6px;cursor:pointer;word-break:break-all}
+.cp{display:inline-block;width:16px;height:16px;margin-left:8px;vertical-align:-2px;color:#aab0ff}
+.cp.ok{color:#7ee787}
 .steps code:hover,.soon code:hover{background:#000b}
-.steps code.copied,.soon code.copied{background:#fff;color:#000}
 .soon{margin-top:14px;font-size:clamp(17px,1.3vw,21px);color:var(--soft);line-height:1.5}
 .soon code{font-family:var(--mono);color:var(--ink);font-size:.92em}
 .try{max-width:1500px;margin:0 auto;padding:24px 64px 72px}
@@ -93,9 +96,13 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
   </section>
 <footer>Only you can summon your bot: it reads your posts by user ID, so strangers never reach your agent or your bill. Summons get web, images, video and skills, never your terminal or files. A Hermes Agent plugin by <a href="https://taylor.fyi">Taylor McKnight</a>.</footer>
 <script>
+const COPY = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
 for (const c of document.querySelectorAll('.steps code, .soon code')) {
-  c.title = 'Click to copy'; c.style.cursor = 'pointer';
-  c.onclick = async () => { try { await navigator.clipboard.writeText(c.textContent); c.classList.add('copied'); setTimeout(() => c.classList.remove('copied'), 900); } catch { } };
+  const text = c.textContent;
+  const i = document.createElement('span'); i.className = 'cp'; i.innerHTML = COPY; c.appendChild(i);
+  c.title = 'Click to copy';
+  c.onclick = async () => { try { await navigator.clipboard.writeText(text); i.innerHTML = CHECK; i.classList.add('ok'); setTimeout(() => { i.innerHTML = COPY; i.classList.remove('ok'); }, 1400); } catch { } };
 }
 </script>
 </body>
