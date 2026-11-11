@@ -17,11 +17,11 @@ requires_env:
     password: false
 optional_env:
   - name: X_BOT_RELAY_KEY
-    description: "Free-trial key from the summon relay. Get one with: hermes gateway setup summon"
+    description: "Free-trial key from the summon relay. Get one with: hermes gateway setup, then choose X"
     prompt: "Summon trial key"
     password: true
   - name: X_BOT_API_KEY
-    description: "Your own X app's consumer key, for after the trial. hermes gateway setup summon walks you through it"
+    description: "Your own X app's consumer key, for after the trial. hermes gateway setup (choose X) walks you through it"
     prompt: "X app consumer key"
     url: "https://console.x.com"
     password: true

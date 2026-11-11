@@ -95,7 +95,7 @@ export class Store extends DurableObject {
       if (p.startsWith('/admin/')) return await this.admin(req, p);
       if (p.startsWith('/v1/')) {
         const bot = await this.bot(req);
-        if (!bot) return json({ error: 'unauthorized', message: 'Unknown summon key. Run: hermes gateway setup summon' }, 401);
+        if (!bot) return json({ error: 'unauthorized', message: 'Unknown summon key. Run hermes gateway setup and choose X' }, 401);
         if (req.method === 'GET' && p === '/v1/status') return json(this.status(bot));
         if (req.method === 'POST' && p === '/v1/x') return await this.proxy(bot, await req.json());
         if (req.method === 'POST' && p === '/v1/media') return await this.media(bot, req);
@@ -110,7 +110,7 @@ export class Store extends DurableObject {
   home() {
     return page('Summon', `<h1>Summon</h1><p>Your own @grok on X, powered by your Hermes agent. Tag your bot under any
       post and your agent answers in the thread.</p><p>This page signs bots in for the free trial. Start from Hermes:
-      <code>hermes gateway setup summon</code></p>`);
+      <code>hermes gateway setup</code> and choose X</p>`);
   }
 
   // ── sign-in ───────────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ export class Store extends DurableObject {
 
   connectPage(c) {
     const pair = this.livePair('code', c);
-    if (!pair || pair.result) return page('Link expired', '<h1>This link expired</h1><p>Run <code>hermes gateway setup summon</code> again for a new one.</p>');
+    if (!pair || pair.result) return page('Link expired', '<h1>This link expired</h1><p>Run <code>hermes gateway setup</code> and choose X again for a new one.</p>');
     return page('Connect your bot', `<h1>Connect your bot</h1>
       <p>Sign in to X as the <b>bot account</b> that will answer <b>@${esc(pair.owner)}</b>, not as @${esc(pair.owner)}.
       If you're signed in to X as yourself, switch accounts first.</p>
@@ -243,7 +243,7 @@ export class Store extends DurableObject {
     const state = url.searchParams.get('state') || '';
     const pair = state && this.sql.exec('SELECT * FROM pairs WHERE state = ?', state).toArray()[0];
     if (!pair || pair.created < Date.now() - PAIR_TTL || pair.result) {
-      return page('Link expired', '<h1>This sign-in expired</h1><p>Run <code>hermes gateway setup summon</code> again.</p>');
+      return page('Link expired', '<h1>This sign-in expired</h1><p>Run <code>hermes gateway setup</code> and choose X again.</p>');
     }
     if (url.searchParams.get('error')) return page('Not connected', '<h1>Not connected</h1><p>X sign-in was cancelled. Open the link from Hermes to try again.</p>');
     const tok = await this.token({
@@ -306,7 +306,7 @@ export class Store extends DurableObject {
   async access(bot, force = false) {
     const t = this.tokenRow(bot);
     if (!force && t.expires > Date.now() + 60_000) return t.access;
-    if (!t.refresh) throw new Error('X sign-in expired. Run: hermes gateway setup summon');
+    if (!t.refresh) throw new Error('X sign-in expired. Run hermes gateway setup and choose X');
     const tok = await this.token({ grant_type: 'refresh_token', refresh_token: t.refresh });
     t.access = tok.access_token;
     t.refresh = tok.refresh_token || t.refresh;
@@ -348,7 +348,7 @@ export class Store extends DurableObject {
     if (off) return off;
     const trialOver = json({
       error: 'trial_over',
-      message: `@${bot.bot_handle} used its ${this.free} free replies. Add your own X keys: hermes gateway setup summon`,
+      message: `@${bot.bot_handle} used its ${this.free} free replies. Add your own X keys: hermes gateway setup, then choose X`,
     }, 402, { 'x-summon-free-left': '0' });
     if (bot.free_left <= 0) return trialOver;
     const { method, path, query = {}, body } = req || {};

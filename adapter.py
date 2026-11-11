@@ -165,7 +165,7 @@ class XAdapter(BasePlatformAdapter):
 
     async def connect(self, *, is_reconnect: bool = False, http: Any = None, data_dir: Optional[Path] = None) -> bool:
         if not self.own_keys and not self.relay:
-            return self._fail("x_config", "Connect a bot first: hermes gateway setup summon (free trial, or your "
+            return self._fail("x_config", "Connect a bot first: hermes gateway setup, then choose X (free trial, or your "
                                           "own X keys)", retryable=False)
         if not self.owner:
             return self._fail("x_config", "Set X_BOT_OWNER to your X handle: the account that can summon the bot",
@@ -190,7 +190,7 @@ class XAdapter(BasePlatformAdapter):
                 return self._fail("x_trial_over", self._trial_over_text(), retryable=False)
             if self.relay and e.status == 401:
                 return self._fail("x_auth", "The summon relay doesn't know this bot's key. Connect it again: "
-                                            "hermes gateway setup summon", retryable=False)
+                                            "hermes gateway setup, then choose X", retryable=False)
             if e.status in (401, 403):
                 return self._fail("x_auth", f"X refused the bot's keys ({e.status}). Check the four X_BOT_ keys, "
                                             "and that the app sits in a Project with pay-per-use credits "
@@ -242,7 +242,7 @@ class XAdapter(BasePlatformAdapter):
 
     def _trial_over_text(self) -> str:
         return (f"@{self._bot_handle or 'your bot'} used its free replies. To keep it answering, add your own X app "
-                "keys: hermes gateway setup summon")
+                "keys: hermes gateway setup, then choose X")
 
     def resolved_allowlist_user_ids(self) -> set[str]:
         """Handles in X_BOT_ALLOWED_USERS resolved to the IDs the gateway compares against."""
@@ -533,7 +533,7 @@ def _env_enablement() -> Optional[dict]:
 
 
 def interactive_setup() -> None:
-    """``hermes gateway setup summon``: the free trial (sign in with X) or your own X app keys."""
+    """``hermes gateway setup, then choose X``: the free trial (sign in with X) or your own X app keys."""
     from .setup import run
     run()
 

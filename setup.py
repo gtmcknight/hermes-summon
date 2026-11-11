@@ -1,4 +1,4 @@
-"""``hermes gateway setup summon``: connect the bot account, then keep X summons to safe tools.
+"""``hermes gateway setup`` > X: connect the bot account, then keep X summons to safe tools.
 
 Two ways in:
   1. Free trial. Open a link on any device, sign in to X as the bot, done. Calls go through the summon
@@ -104,7 +104,7 @@ def run() -> None:
 
     print_header("X (summon)")
     print_info("Tag your bot under any post on X and your Hermes answers in the thread.")
-    print_info("You need a second X account for the bot. Only you can summon it.")
+    print_info("Only you can summon it. No bot account yet? Borrow @taybotfyi with an invite code.")
     owner = prompt("Your X handle", default=get_env_value("X_BOT_OWNER") or "").strip().lstrip("@")
     if not owner:
         print_warning("No handle, nothing saved.")

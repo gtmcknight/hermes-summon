@@ -15,10 +15,10 @@ For the hackathon judges, or anyone with a Hermes and an X account:
 ```
 hermes plugins install https://github.com/gtmcknight/hermes-summon
 hermes plugins enable summon
-hermes gateway setup summon
+hermes gateway setup
 ```
 
-Type your X handle, pick **Borrow @taybotfyi**, and enter the invite code `judge-hermes`. Start `hermes gateway`, then reply to any post with `@taybotfyi is this true?` Your own Hermes answers as @taybotfyi under your post. Five replies, under your own posts only, each one checked by a moderation model before it goes out.
+Choose **X**, type your X handle, pick **Borrow @taybotfyi**, and enter the invite code `judge-hermes`. Start `hermes gateway`, then reply to any post with `@taybotfyi is this true?` Your own Hermes answers as @taybotfyi under your post. Five replies, under your own posts only, each one checked by a moderation model before it goes out.
 
 The film: [summon.taylor.fyi](https://summon.taylor.fyi).
 
@@ -34,10 +34,10 @@ You need Hermes 0.23 or newer and a second X account for the bot.
 
    Until it's in the catalog: `hermes plugins install https://github.com/gtmcknight/hermes-summon`, then `hermes plugins enable summon`.
 
-2. Run setup. Enter your handle and pick the free trial, then open the link it prints on any device, signed in to X as the bot. No bot account yet? Pick "Borrow @taybotfyi" and enter the invite code from the hackathon entry: your Hermes answers as @taybotfyi under your own posts, 5 replies, no sign-in.
+2. Run setup and choose **X**. Enter your handle and pick the free trial, then open the link it prints on any device, signed in to X as the bot. No bot account yet? Pick "Borrow @taybotfyi" and enter the invite code from the hackathon entry: your Hermes answers as @taybotfyi under your own posts, 5 replies, no sign-in.
 
    ```
-   hermes gateway setup summon
+   hermes gateway setup
    ```
 
 3. Start the gateway, or restart it if it's already running.
@@ -92,7 +92,7 @@ It also turns on Hermes's skill approval, so nothing learned from X is used befo
 
 1. Sign in to [console.x.com](https://console.x.com) as the bot and make an app in a Pay Per Use project.
 2. Set its permissions to Read and write, then generate the access token. A token made before that change can only read.
-3. Run `hermes gateway setup summon`, pick "My own X app" and paste the four values from Keys and tokens.
+3. Run `hermes gateway setup`, choose X, pick "My own X app" and paste the four values from Keys and tokens.
 
 Setup asks X which account the keys post as, and refuses keys for your own account.
 
