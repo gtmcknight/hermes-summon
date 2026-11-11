@@ -63,6 +63,10 @@ export class Store extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS bots (key_hash TEXT PRIMARY KEY, bot_id TEXT, bot_handle TEXT,
       owner_id TEXT, owner_handle TEXT, access TEXT, refresh TEXT, expires INTEGER, free_left INTEGER,
       day TEXT, reads INTEGER, created INTEGER)`);
+    // Borrowed keys: a row whose token_of names the bot_id of the signed-in row that holds the X tokens.
+    if (!this.sql.exec("SELECT 1 FROM pragma_table_info('bots') WHERE name = 'token_of'").toArray().length) {
+      this.sql.exec('ALTER TABLE bots ADD COLUMN token_of TEXT');
+    }
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`);
   }
 
@@ -110,12 +114,13 @@ export class Store extends DurableObject {
   // ── sign-in ───────────────────────────────────────────────────────────────
 
   async pair(req, origin) {
-    const { owner } = await req.json().catch(() => ({}));
+    const { owner, borrow } = await req.json().catch(() => ({}));
     const handle = String(owner || '').replace(/^@/, '');
     if (!HANDLE.test(handle)) return json({ error: 'bad_owner', message: 'owner must be an X handle' }, 400);
     if (Number(this.meta('replies_given')) >= Number(this.env.TRIAL_POOL || 2000)) {
       return json({ error: 'trial_closed', message: 'The free trial is full. Use your own X keys.' }, 403);
     }
+    if (borrow) return await this.borrow(handle);
     this.sql.exec('DELETE FROM pairs WHERE created < ?', Date.now() - PAIR_TTL);
     if (this.sql.exec('SELECT COUNT(*) AS n FROM pairs').toArray()[0].n >= 500) {
       return json({ error: 'busy', message: 'Too many sign-ins in progress. Try again in a few minutes.' }, 429);
@@ -123,6 +128,31 @@ export class Store extends DurableObject {
     const id = random(18), c = code();
     this.sql.exec('INSERT INTO pairs (id, code, owner, created) VALUES (?, ?, ?, ?)', id, c, handle, Date.now());
     return json({ pair: id, code: c, url: `${origin}/c/${c}`, expires_in: PAIR_TTL / 1000 });
+  }
+
+  // The demo path: no bot account needed. The owner's Hermes answers as the shared bot (BORROW_BOT, signed in
+  // once by its owner) under the owner's own posts only, for BORROW_FREE replies. The key gets no tokens of its
+  // own; the proxy uses the signed-in row's, so a refresh never races between borrowers.
+  async borrow(handle) {
+    const shared = String(this.env.BORROW_BOT || '').replace(/^@/, '').toLowerCase();
+    const primary = shared && this.sql.exec(
+      'SELECT * FROM bots WHERE lower(bot_handle) = ? AND token_of IS NULL ORDER BY created DESC LIMIT 1', shared).toArray()[0];
+    if (!primary) return json({ error: 'no_borrow', message: 'Borrowing a bot is not available right now. Sign in with your own bot account.' }, 503);
+    const res = await this.x(primary, 'GET', `/2/users/by/username/${encodeURIComponent(handle)}`);
+    const owner = res.ok ? (await res.json())?.data : null;
+    if (!owner?.id) return json({ error: 'no_owner', message: `@${handle} isn't on X` }, 404);
+    if (owner.id === primary.bot_id) return json({ error: 'bad_owner', message: 'That is the shared bot itself' }, 400);
+    const prior = this.sql.exec('SELECT MIN(free_left) AS f FROM bots WHERE bot_id = ? AND owner_id = ? AND token_of IS NOT NULL',
+      primary.bot_id, owner.id).toArray()[0]?.f;
+    const free = Math.min(prior ?? Infinity, Number(this.env.BORROW_FREE || 10));
+    this.sql.exec('DELETE FROM bots WHERE bot_id = ? AND owner_id = ? AND token_of IS NOT NULL', primary.bot_id, owner.id);
+    const key = `sk_summon_${random(24)}`;
+    this.sql.exec(
+      `INSERT INTO bots (key_hash, bot_id, bot_handle, owner_id, owner_handle, access, refresh, expires, free_left, day, reads, created, token_of)
+       VALUES (?, ?, ?, ?, ?, '', '', 0, ?, ?, 0, ?, ?)`,
+      await sha256(key), primary.bot_id, primary.bot_handle, owner.id, owner.username, free, today(), Date.now(), primary.bot_id);
+    return json({ status: 'done', key, bot: primary.bot_handle, bot_id: primary.bot_id, owner: owner.username, owner_id: owner.id,
+      free_left: free, borrowed: true });
   }
 
   livePair(where, value) {
@@ -190,7 +220,7 @@ export class Store extends DurableObject {
     // A bot keeps what's left of its trial across sign-ins, so signing in again never resets it.
     const prior = this.sql.exec('SELECT MIN(free_left) AS f FROM bots WHERE bot_id = ?', me.id).toArray()[0]?.f;
     const free = prior ?? this.free;
-    this.sql.exec('DELETE FROM bots WHERE bot_id = ?', me.id);
+    this.sql.exec('DELETE FROM bots WHERE bot_id = ? AND token_of IS NULL', me.id);
     const key = `sk_summon_${random(24)}`;
     this.sql.exec(
       `INSERT INTO bots (key_hash, bot_id, bot_handle, owner_id, owner_handle, access, refresh, expires, free_left, day, reads, created)
@@ -224,15 +254,23 @@ export class Store extends DurableObject {
     return { bot: bot.bot_handle, owner: bot.owner_handle, free_left: bot.free_left };
   }
 
+  tokenRow(bot) {
+    if (!bot.token_of) return bot;
+    const row = this.sql.exec('SELECT * FROM bots WHERE bot_id = ? AND token_of IS NULL ORDER BY created DESC LIMIT 1', bot.token_of).toArray()[0];
+    if (!row) throw new Error('The shared bot is no longer signed in');
+    return row;
+  }
+
   async access(bot, force = false) {
-    if (!force && bot.expires > Date.now() + 60_000) return bot.access;
-    if (!bot.refresh) throw new Error('X sign-in expired. Run: hermes gateway setup summon');
-    const tok = await this.token({ grant_type: 'refresh_token', refresh_token: bot.refresh });
-    bot.access = tok.access_token;
-    bot.refresh = tok.refresh_token || bot.refresh;
-    bot.expires = Date.now() + (Number(tok.expires_in) || 7200) * 1000;
-    this.sql.exec('UPDATE bots SET access = ?, refresh = ?, expires = ? WHERE key_hash = ?', bot.access, bot.refresh, bot.expires, bot.key_hash);
-    return bot.access;
+    const t = this.tokenRow(bot);
+    if (!force && t.expires > Date.now() + 60_000) return t.access;
+    if (!t.refresh) throw new Error('X sign-in expired. Run: hermes gateway setup summon');
+    const tok = await this.token({ grant_type: 'refresh_token', refresh_token: t.refresh });
+    t.access = tok.access_token;
+    t.refresh = tok.refresh_token || t.refresh;
+    t.expires = Date.now() + (Number(tok.expires_in) || 7200) * 1000;
+    this.sql.exec('UPDATE bots SET access = ?, refresh = ?, expires = ? WHERE key_hash = ?', t.access, t.refresh, t.expires, t.key_hash);
+    return t.access;
   }
 
   async x(bot, method, path, query, body, retry = true) {
@@ -242,7 +280,7 @@ export class Store extends DurableObject {
       headers: { authorization: `Bearer ${await this.access(bot)}`, ...(body !== undefined && { 'content-type': 'application/json' }) },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-    if (res.status === 401 && retry && bot.refresh) {
+    if (res.status === 401 && retry && this.tokenRow(bot).refresh) {
       await this.access(bot, true);
       return this.x(bot, method, path, query, body, false);
     }

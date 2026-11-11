@@ -10,6 +10,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 OWNER = {"id": "13140", "username": "taylor_", "name": "Taylor"}
+JUDGE = {"id": "55", "username": "judge1", "name": "A judge"}
 BOT = {"id": "999", "username": "taybotfyi", "name": "tay bot"}
 POSTS = {
     "500": {"id": "500", "text": "BTC is up 900% this year", "author_id": "77", "conversation_id": "500"},
@@ -17,6 +18,8 @@ POSTS = {
             "referenced_posts": [{"type": "replied_to", "id": "500"}], "display_text_range": [9, 34],
             "entities": {"mentions": [{"start": 0, "end": 8, "id": "77", "username": "someone"},
                                       {"start": 9, "end": 19, "id": BOT["id"], "username": "taybotfyi"}]}},
+    "600": {"id": "600", "text": "@taybotfyi what is this?", "author_id": JUDGE["id"], "conversation_id": "600",
+            "display_text_range": [0, 24], "entities": {"mentions": [{"start": 0, "end": 10, "id": BOT["id"], "username": "taybotfyi"}]}},
 }
 STATE = {"replies": [], "tokens": 0, "seen_auth": []}
 
@@ -53,10 +56,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"data": BOT})
         if u.path.startswith("/2/users/by/username/"):
             name = u.path.rsplit("/", 1)[1].lower()
-            return self.send(200, {"data": OWNER} if name == OWNER["username"] else {"errors": [{"title": "Not Found"}]})
+            who = {OWNER["username"]: OWNER, JUDGE["username"]: JUDGE}.get(name)
+            return self.send(200, {"data": who} if who else {"errors": [{"title": "Not Found"}]})
         if u.path == "/2/tweets/search/recent":
             if q["query"].startswith("conversation_id:"):
                 return self.send(200, {"meta": {"result_count": 0}})
+            if q["query"].startswith(f"from:{JUDGE['id']} "):
+                return self.send(200, {"data": [POSTS["600"]], "includes": {"users": [JUDGE]}, "meta": {"newest_id": "600"}})
             return self.send(200, {"data": [POSTS["501"]], "includes": {"users": [OWNER]}, "meta": {"newest_id": "501"}})
         if u.path == "/2/tweets":
             ids = q.get("ids", "").split(",")

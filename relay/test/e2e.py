@@ -125,10 +125,30 @@ def main():
 
 
     asyncio.run(run())
+
+    # Borrowing: a judge with no bot account gets a key for the shared bot, under their own posts only
+    borrowed = setup.trial("judge1", RELAY, lines.append, borrow=True)
+    check(borrowed and borrowed.get("bot") == "taybotfyi" and borrowed.get("owner") == "judge1", "a judge borrows @taybotfyi with no sign-in")
+    os.environ.update({"X_BOT_OWNER": "judge1", "X_BOT_RELAY_KEY": borrowed["key"]})
+
+    async def run_borrowed():
+        import tempfile
+        a = A.XAdapter(types.SimpleNamespace(extra={}))
+        ok = await a.connect(http=UrllibHTTP(), data_dir=Path(tempfile.mkdtemp()))
+        a._task.cancel()
+        check(ok and a._bot_handle == "taybotfyi" and a.owner == "judge1", "the borrowed key connects as @taybotfyi for the judge")
+        a.handle_message = lambda ev: asyncio.sleep(0)
+        check(await a._poll_once() == 1, "the judge's own summons reaches their agent")
+        r = await a.send("600", "It's a test post.", reply_to="600")
+        check(r.success, "the judge's Hermes replies as @taybotfyi under the judge's post")
+        r = await a.send("500", "Nope.", reply_to="501")
+        check(not r.success, "but not under anyone else's post")
+
+    asyncio.run(run_borrowed())
     with urllib.request.urlopen(FAKE_X + "/replies") as r:
         st = json.loads(r.read())
-    check(len(st["replies"]) == 2, f"X got exactly 2 replies ({len(st['replies'])})")
-    check(all(x["reply"]["in_reply_to_tweet_id"] == "501" for x in st["replies"]), "both replies sit under the owner's post")
+    check(len(st["replies"]) == 3, f"X got exactly 3 replies ({len(st['replies'])})")
+    check([x["reply"]["in_reply_to_tweet_id"] for x in st["replies"]] == ["501", "501", "600"], "every reply sits under its owner's post")
     check(not any("sk_summon_" in a for a in st["seen_auth"]), "X never saw the trial key")
     print("\n" + ("ALL PASSED" if not failures else f"{len(failures)} FAILED"))
     sys.exit(1 if failures else 0)

@@ -34,9 +34,15 @@ def _post_json(url: str, body: dict, timeout: float = 20) -> dict:
             return {"status": "error", "http": e.code}
 
 
-def trial(owner: str, relay: str, out, wait: float = 900, every: float = 3) -> dict | None:
-    """Pair a bot through the relay. ``out`` gets the lines to show. Returns the claim or None."""
-    started = _post_json(relay.rstrip("/") + "/v1/pair", {"owner": owner})
+def trial(owner: str, relay: str, out, wait: float = 900, every: float = 3, borrow: bool = False) -> dict | None:
+    """Pair a bot through the relay. ``out`` gets the lines to show. Returns the claim or None.
+    ``borrow`` skips the sign-in: the relay lends its shared bot for a few replies under the owner's posts."""
+    started = _post_json(relay.rstrip("/") + "/v1/pair", {"owner": owner, "borrow": True} if borrow else {"owner": owner})
+    if borrow:
+        if started.get("status") == "done":
+            return started
+        out(f"Borrowing isn't available: {started.get('message') or started}")
+        return None
     if not started.get("pair"):
         out(f"The trial isn't available right now: {started.get('message') or started}")
         return None
@@ -103,13 +109,14 @@ def run() -> None:
     save_env_value("X_BOT_OWNER", owner)
 
     choice = prompt_choice("How should the bot reach X?", [
-        "Free trial: sign in with X as the bot (no keys, first replies free)",
+        "Free trial: sign in with X as your bot account (no keys, first replies free)",
+        "Borrow @taybotfyi: no bot account needed, it answers only under your posts (demo, 10 replies)",
         "My own X app: keeps going after the trial, you pay X about a cent a reply",
     ], default=0)
 
-    if choice == 0:
+    if choice in (0, 1):
         relay = get_env_value("X_BOT_RELAY_URL") or DEFAULT_RELAY
-        claim = trial(owner, relay, print_info)
+        claim = trial(owner, relay, print_info, borrow=(choice == 1))
         if not claim:
             return
         save_env_value("X_BOT_RELAY_KEY", claim["key"])

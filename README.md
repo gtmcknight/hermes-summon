@@ -18,7 +18,7 @@ You need Hermes 0.23 or newer and a second X account for the bot.
 
    Until it's in the catalog: `hermes plugins install https://github.com/gtmcknight/hermes-summon`, then `hermes plugins enable summon`.
 
-2. Run setup. Enter your handle, pick the free trial, then open the link it prints on any device, signed in to X as the bot.
+2. Run setup. Enter your handle and pick the free trial, then open the link it prints on any device, signed in to X as the bot. No bot account yet? Pick "Borrow @taybotfyi" instead: your Hermes answers as @taybotfyi under your own posts, 10 replies, no sign-in.
 
    ```
    hermes gateway setup summon
@@ -109,6 +109,7 @@ Setup writes the keys: `X_BOT_RELAY_KEY` for the trial, or `X_BOT_API_KEY`, `X_B
 summon.taylor.fyi is a Cloudflare Worker run by the plugin's author. Its code is in [`relay/`](relay/).
 
 - When you sign in as the bot, the relay keeps the bot's X sign-in and gives the plugin a key. The relay stores only a hash of that key.
+- "Borrow @taybotfyi" gives you a key for the author's own bot instead, with no sign-in. It can only reply under your posts, 10 times, and the author can switch it off.
 - It forwards only what summon needs: the search for your summons, thread reads, and replies under posts you wrote. Everything else is refused, including other searches, posts that aren't replies to your posts, DMs, likes and follows.
 - It stores your handle and the bot's, both user IDs, the bot's X tokens, and counts of replies and reads. It doesn't store posts, and it logs errors only.
 - To cut it off, revoke the app in the bot's X settings under Connected apps.
