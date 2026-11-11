@@ -29,9 +29,9 @@ h1{font-family:"Rubik Glitch","Avenir Next Condensed",sans-serif;font-size:clamp
 .verbs span a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6;white-space:nowrap}
 .verbs b{display:block;font-weight:600;font-size:1.35em;margin-bottom:4px}
 .verbs span{font-weight:400;color:var(--soft)}
-.install{margin-top:40px;max-width:100%;display:inline-flex;align-items:center;gap:14px;background:#000a;border:1px solid #fff3;border-radius:14px;padding:16px 20px;
- font:500 clamp(16px,1.3vw,21px)/1 var(--mono);color:#fff}
-.install code{white-space:nowrap}
+.install{margin-top:40px;max-width:100%;display:flex;align-items:flex-start;gap:16px;background:#000a;border:1px solid #fff3;border-radius:14px;padding:18px 20px;
+ font:500 clamp(15px,1.2vw,19px)/1.6 var(--mono);color:#fff}
+.install pre{margin:0;white-space:pre-wrap;word-break:break-all;flex:1;font:inherit}
 .install button{font:inherit;background:#fff;color:#000;border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
 .soon{margin-top:14px;font-size:clamp(17px,1.3vw,21px);color:var(--soft);line-height:1.5}
 .soon code{font-family:var(--mono);color:var(--ink);font-size:.92em}
@@ -48,8 +48,7 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
  .lead br{display:none}
  .verbs div{display:block}
  .verbs b{display:block;margin-bottom:4px}
- .install{display:flex;width:100%;justify-content:space-between;font-size:13px;padding:14px 14px;gap:10px}
- .install code{white-space:normal}
+ .install{width:100%;font-size:13px;padding:14px 14px;gap:10px}
  .film{width:min(100%,360px);margin:36px auto 0}
  footer{padding:0 20px 32px}
 }
@@ -65,8 +64,10 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
       <div><b>Find anything.</b><span>Example: six events, no links. "Find the RSVP links." Every link came back in one reply. <a href="https://x.com/taybotfyi/status/2120571351748448581">See it on X</a></span></div>
       <div><b>Learn anything.</b><span>Example: "learn this" under a five-minute how-to video. It watched it and wrote a skill you approve. <a href="https://x.com/taybotfyi/status/2120572441500008691">See it on X</a></span></div>
     </div>
-    <div class="install"><code id="cmd">hermes plugins install https://github.com/gtmcknight/hermes-summon</code><button id="copy" type="button">Copy</button></div>
-    <p class="soon">Then <code>hermes plugins enable summon</code> and <code>hermes gateway setup</code> and choose X. Once the catalog PR merges: <code>hermes plugins install summon</code>.</p>
+    <div class="install"><pre id="cmd">hermes plugins install https://github.com/gtmcknight/hermes-summon
+hermes plugins enable summon
+hermes gateway setup</pre><button id="copy" type="button">Copy</button></div>
+    <p class="soon">In setup, choose X, then "Borrow @taybotfyi" with the invite code from the hackathon entry. Once the catalog PR merges, it's just <code>hermes plugins install summon</code>.</p>
     <div class="links">
       <a href="https://github.com/gtmcknight/hermes-summon">Source and README</a>
       <a href="https://github.com/gtmcknight/hermes-summon#what-it-costs">Free trial, then your own X app</a>
