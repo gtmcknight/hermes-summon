@@ -5,6 +5,7 @@
   "account_id": "4bb301c030d011f1d7869920fbe8c606",
   "routes": [{ "pattern": "summon.taylor.fyi", "custom_domain": true }],
   "main": "src/index.js",
+  "assets": { "directory": "./public" },
   "compatibility_date": "2026-09-01",
   "durable_objects": { "bindings": [{ "name": "STORE", "class_name": "Store" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Store"] }],
