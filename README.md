@@ -62,6 +62,7 @@ The bot checks X every 20 seconds for your posts that tag it, or that reply to i
 - It sees up to 6 photos from them, and can watch their videos.
 - It answers once, under your post, in one post when the bot has X Premium. Without it, a long answer goes out as numbered replies, up to 8.
 - Images your agent makes are attached, up to 4.
+- Its reply tags nobody. Other accounts tagged in your post are left out of it, and handles are written without the @.
 
 To follow up, reply to the bot. Its replies are short and plain: the answer first, one source when it settles the question, never a recap. Hermes's `SOUL.md` sets its voice everywhere, X included.
 
@@ -92,6 +93,8 @@ It also turns on Hermes's skill approval, so nothing learned from X is used befo
 | Reading the thread | Free | About $0.005 a post |
 | Limit | 300 posts read a day | $1.00 a day, set by `X_BOT_DAILY_BUDGET` |
 
+The daily limit is a hard stop. A reply that would pass it is held back, and the bot reads nothing more until tomorrow (UTC). A summons it could not afford to read waits and is answered then.
+
 ## After the trial, use your own X app
 
 1. Sign in to [console.x.com](https://console.x.com) as the bot and make an app in a Pay Per Use project.
@@ -108,7 +111,7 @@ Setup asks X which account the keys post as, and refuses keys for your own accou
 | `X_BOT_ALLOWED_USERS` | More handles that can summon it, comma-separated (own X app only) | None |
 | `X_BOT_POLL_SECONDS` | Seconds between checks, 15 at least | 20 |
 | `X_BOT_POST_LIMIT` | Characters per post. Leave it empty and the bot finds out: one long post with X Premium, 280 after X refuses one | Learned |
-| `X_BOT_DAILY_BUDGET` | Most the bot spends on X in a day, in dollars (own X app) | 1.00 |
+| `X_BOT_DAILY_BUDGET` | Most the bot spends on X in a day, in dollars (own X app). 0 means no limit | 1.00 |
 | `X_BOT_DRY_RUN` | `true` writes replies to the log instead of posting them | false |
 | `X_BOT_TIMEZONE` | Time zone for the dates the agent sees | This machine's |
 | `X_BOT_RELAY_URL` | The free trial relay | https://summon.taylor.fyi |

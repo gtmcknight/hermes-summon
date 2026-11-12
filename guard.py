@@ -58,6 +58,14 @@ def private_bits(text: str, seen: str = "") -> list[str]:
 _NOTICE_PREFIXES = ("⚡", "⏳", "⏩", "💾", "⚠️ ", "🔄", "📬")
 
 
+_TAG = re.compile(r"(?<![\w@/.])@(?=\w)")
+
+
+def untag(text: str) -> str:
+    """Handles without their @, so a reply tags nobody. Email addresses and links keep theirs."""
+    return _TAG.sub("", text or "")
+
+
 def is_notice(text: str) -> bool:
     return text.lstrip().startswith(_NOTICE_PREFIXES)
 

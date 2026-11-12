@@ -1,7 +1,7 @@
 name: summon
 label: X
 kind: platform
-version: 0.1.0
+version: 0.1.1
 requires_hermes: ">=0.23"
 description: >
   Your own @grok on X that learns. Tag your bot under any post and your Hermes

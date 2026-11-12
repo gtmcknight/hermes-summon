@@ -20,6 +20,7 @@ import asyncio
 import dataclasses
 import datetime as dt
 import logging
+import math
 import mimetypes
 import time
 from pathlib import Path
@@ -30,9 +31,9 @@ from gateway.platforms._shared import extra_or_secret, get_scoped_secret
 from gateway.platforms.base import BasePlatformAdapter, SendResult, cache_image_from_url
 from gateway.platforms.event import MessageEvent, MessageType
 
-from .guard import is_notice, leaks, others, plain, private_bits
+from .guard import is_notice, leaks, others, plain, private_bits, untag
 from .split import parts, room, weight
-from .state import State
+from .state import PRICE, State
 from .thread import Book, body, brief, commands_query, context, is_command, refs
 from .xapi import Keys, Relay, XClient, XError
 
@@ -83,6 +84,25 @@ def _secret(extra: dict, key: str, env: str, default: str = "") -> str:
     return (extra_or_secret(extra, key, env) or default or "").strip()
 
 
+def _number(extra: dict, key: str, env: str, default: float) -> float:
+    """A numeric setting. One that isn't a number is logged and its default used: a typo never stops the bot."""
+    raw = _secret(extra, key, env)
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value):
+        logger.warning("x: %s is %r, not a number; using %s", env, raw, default)
+        return default
+    return value
+
+
+class _OverBudget(Exception):
+    """The reply about to be posted would take today's spend past X_BOT_DAILY_BUDGET."""
+
+
 def _handles(raw: str) -> list[str]:
     return [h.strip().lstrip("@") for h in (raw or "").replace(" ", ",").split(",") if h.strip().lstrip("@")]
 
@@ -130,7 +150,7 @@ class XAdapter(BasePlatformAdapter):
         self.relay = Relay(_secret(extra, "relay_url", "X_BOT_RELAY_URL", DEFAULT_RELAY), relay_key) if relay_key else None
         self.extra_users = [h for h in _handles(_secret(extra, "allowed_users", "X_BOT_ALLOWED_USERS"))
                             if h.lower() != self.owner.lower()]
-        self.poll_seconds = max(15, int(_secret(extra, "poll_seconds", "X_BOT_POLL_SECONDS", "20") or 20))
+        self.poll_seconds = max(15, int(_number(extra, "poll_seconds", "X_BOT_POLL_SECONDS", 20)))
         # Characters per post: X_BOT_POST_LIMIT when set. Otherwise each answer is one long post (X Premium)
         # until X refuses one; then the bot splits at 280 and remembers it (state.json).
         try:
@@ -138,7 +158,7 @@ class XAdapter(BasePlatformAdapter):
         except ValueError:
             self.limit_from_env = 0
         self.post_limit = min(25000, max(280, self.limit_from_env or LONG_POST))
-        self.budget = float(_secret(extra, "daily_budget", "X_BOT_DAILY_BUDGET", "1.00") or 0)
+        self.budget = max(0.0, _number(extra, "daily_budget", "X_BOT_DAILY_BUDGET", 1.00))
         self.dry_run = _secret(extra, "dry_run", "X_BOT_DRY_RUN").lower() in _TRUTHY
         self.tz = _timezone(_secret(extra, "timezone", "X_BOT_TIMEZONE"))
         self.x: Optional[XClient] = None
@@ -263,6 +283,12 @@ class XAdapter(BasePlatformAdapter):
                            self.state.spent_today())
         return True
 
+    def _would_pass(self, replies: int) -> bool:
+        """Whether posting this many replies would take today's spend past the budget."""
+        if self.relay or not self.budget or not self.state or self.dry_run:
+            return False
+        return self.state.spent_today() + replies * PRICE["reply"] > self.budget + 1e-9
+
     # ── inbound ──────────────────────────────────────────────────────────────
 
     async def _poll_loop(self) -> None:
@@ -305,9 +331,15 @@ class XAdapter(BasePlatformAdapter):
         book = Book().add(res)
         data = res.get("data") or []
         sent = 0
+        newest = (res.get("meta") or {}).get("newest_id")
         for post in sorted(data if isinstance(data, list) else [data], key=lambda p: int(p["id"])):
             if self.state.handled(post["id"]):
                 continue
+            if self._over_budget():
+                # Reading for the summons before this one reached the cap. This one and the rest are
+                # left unread and unmarked, and the next search (tomorrow) starts again from here.
+                newest = str(int(post["id"]) - 1)
+                break
             self.state.mark(post["id"])  # first, so a post is never answered twice
             if post.get("author_id") not in self._allowed or refs(post, "retweeted"):
                 continue  # the search already excludes these; checked again anyway
@@ -321,7 +353,7 @@ class XAdapter(BasePlatformAdapter):
                 raise
             except Exception:
                 logger.exception("x: couldn't hand post %s to the agent", post["id"])
-        self.state.since_id = (res.get("meta") or {}).get("newest_id")
+        self.state.since_id = newest
         self.state.save()
         return sent
 
@@ -401,6 +433,7 @@ class XAdapter(BasePlatformAdapter):
         if not target:
             return SendResult(success=False, error="x: the bot only replies under a post that summoned it")
         cmd = self._commands[target]
+        text = untag(text)  # a handle is written without its @: the bot tags nobody
         if not text and not images:
             self._note(target, "empty", 0, [])
             return SendResult(success=True)  # asked for nothing: nothing is posted
@@ -413,9 +446,16 @@ class XAdapter(BasePlatformAdapter):
             return SendResult(success=False, error="x: held back a reply with contact details that weren't in the thread")
         if self._over_budget():
             return SendResult(success=False, error="x: today's X_BOT_DAILY_BUDGET is spent")
+        held = SendResult(success=False, error="x: held back a reply that would pass today's X_BOT_DAILY_BUDGET")
+        if self._would_pass(len(parts(text, self.post_limit)) if text else 1):
+            self._note(target, "held: would pass the daily budget", 0, [])
+            return held
         try:
             media = await self._upload(images[:4])
-            ids = await self._post(text, target, media)
+            ids = await self._post(text, target, media, exclude=cmd.get("others") or None)
+        except _OverBudget:
+            self._note(target, "held: would pass the daily budget", 0, [])
+            return held
         except XError as e:
             self._note(target, f"failed: X {e.status}", 0, [])
             if e.status == 402:
@@ -429,9 +469,11 @@ class XAdapter(BasePlatformAdapter):
         return SendResult(success=True, message_id=ids[-1] if ids else None,
                           continuation_message_ids=tuple(ids[:-1]))
 
-    async def _post(self, text: str, to: str, media: list[str], limit: Optional[int] = None) -> list[str]:
+    async def _post(self, text: str, to: str, media: list[str], limit: Optional[int] = None,
+                    exclude: Optional[list[str]] = None) -> list[str]:
         """Every part goes directly under the summoning post: X lets a bot reply only where it was
-        tagged, and those replies cost $0.01 each, links included."""
+        tagged, and those replies cost $0.01 each, links included. ``exclude`` is the other accounts
+        the summoning post tagged: they are left out of the reply, so the bot notifies nobody but its owner."""
         limit = limit or self.post_limit
         chunks = parts(text, limit) if text else [""]
         ids: list[str] = []
@@ -442,7 +484,7 @@ class XAdapter(BasePlatformAdapter):
                 ids.append(f"dry-{to}-{i}")
                 continue
             try:
-                ids.append(await self.x.reply(chunk, to, media=first))
+                ids.append(await self.x.reply(chunk, to, exclude=exclude, media=first))
             except XError as e:
                 # The bot tried one long post and X refused it: no Premium. Split this answer at 280 and
                 # keep 280 from now on, so the next answers are written for it.
@@ -452,7 +494,9 @@ class XAdapter(BasePlatformAdapter):
                     self.post_limit = 280
                     if self.state and not self.limit_from_env:
                         self.state.post_limit = 280
-                    return await self._post(text, to, media, limit=280)
+                    if self._would_pass(len(parts(text, 280))):  # more posts than the one long post would have cost
+                        raise _OverBudget()
+                    return await self._post(text, to, media, limit=280, exclude=exclude)
                 raise
         return ids
 

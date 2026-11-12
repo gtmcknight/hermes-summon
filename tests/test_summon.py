@@ -347,7 +347,7 @@ class Adapter(Base):
         res = await a.send("500", "**No.** It's up 90%, not 900%: https://example.com/btc", reply_to="501")
         self.assertTrue(res.success)
         self.assertEqual(self.fx.replies, [{"text": "No. It's up 90%, not 900%: https://example.com/btc",
-                                            "reply": {"in_reply_to_tweet_id": "501"}}])
+                                            "reply": {"in_reply_to_tweet_id": "501", "exclude_reply_user_ids": ["77"]}}])
         log = a.state.recent()
         self.assertEqual(log[0]["status"], "replied")
 
@@ -417,6 +417,66 @@ class Adapter(Base):
         res = await a.send("500", "an answer", reply_to="501")
         self.assertTrue(res.success)
         self.assertEqual(self.fx.replies, [])
+
+    async def test_a_reply_tags_nobody(self):
+        """The other account the summons tagged is left out of the reply, and handles lose their @."""
+        a = await self.adapter()
+        await self.summon(a)
+        res = await a.send("500", "Per @someone and (@other_guy) it's fine: https://medium.com/@writer/post", reply_to="501")
+        self.assertTrue(res.success)
+        sent = self.fx.replies[0]
+        self.assertEqual(sent["text"], "Per someone and (other_guy) it's fine: https://medium.com/@writer/post")
+        self.assertEqual(sent["reply"]["exclude_reply_user_ids"], ["77"])
+        self.assertEqual(guard.untag("mail me@example.com or @@x"), "mail me@example.com or @@x")
+
+    async def test_a_setting_that_is_not_a_number_does_not_stop_the_bot(self):
+        a = await self.adapter(X_BOT_DAILY_BUDGET="a dollar", X_BOT_POLL_SECONDS="soon")
+        self.assertEqual(a.budget, 1.0)
+        self.assertEqual(a.poll_seconds, 20)
+        b = await self.adapter(X_BOT_DAILY_BUDGET="nan", X_BOT_POLL_SECONDS="5")
+        self.assertEqual(b.budget, 1.0)
+        self.assertEqual(b.poll_seconds, 15)
+
+    async def test_a_reply_that_would_pass_the_budget_is_held(self):
+        a = await self.adapter(X_BOT_DAILY_BUDGET="0.05", X_BOT_POST_LIMIT="280")
+        await self.summon(a)
+        a.state.data["spend"] = {State.today(): 0.03}
+        long = "\n\n".join(f"Point {i}: " + "detail " * 30 for i in range(4))
+        self.assertGreater(len(split.parts(long, 280)), 2)
+        res = await a.send("500", long, reply_to="501")
+        self.assertFalse(res.success)
+        self.assertIn("X_BOT_DAILY_BUDGET", res.error)
+        self.assertEqual(self.fx.replies, [])
+        self.assertEqual(a.state.recent()[0]["status"], "held: would pass the daily budget")
+        self.assertTrue((await a.send("500", "Short answer.", reply_to="501")).success)  # one post still fits
+        self.assertEqual(len(self.fx.replies), 1)
+
+    async def test_the_280_fallback_is_held_when_it_would_pass_the_budget(self):
+        a = await self.adapter(X_BOT_DAILY_BUDGET="0.05")
+        await self.summon(a)
+        a.state.data["spend"] = {State.today(): 0.03}
+        self.fx.fail_reply = [403]  # X refuses the one long post: split at 280 would be several posts
+        res = await a.send("500", "word " * 200, reply_to="501")
+        self.assertFalse(res.success)
+        self.assertEqual(self.fx.replies, [])
+        self.assertEqual(a.post_limit, 280)
+
+    async def test_the_budget_stops_mid_batch_and_keeps_the_rest_for_later(self):
+        a = await self.adapter(X_BOT_DAILY_BUDGET="0.012")
+        self.fx.posts["500"] = {"id": "500", "text": "BTC is up 900% this year (chart)", "author_id": "77",
+                                "conversation_id": "500", "created_at": "2026-11-07T19:00:00.000Z"}
+        first = post("501", "@someone @taybotfyi is this chart right?", reply_to="500", conversation="500", typed_from=9,
+                     mentions=[{"start": 0, "end": 8, "id": "77", "username": "someone"},
+                               bot_mention("@someone @taybotfyi is this chart right?")])
+        second = post("601", "@taybotfyi and what about this one?", mentions=[bot_mention("@taybotfyi and what about this one?")])
+        self.fx.searches.append({"data": [first, second], "meta": {"newest_id": "601"}})
+        self.assertEqual(await a._poll_once(), 1)  # the search and the first thread's reads reach the cap
+        self.assertTrue(a.state.handled("501"))
+        self.assertFalse(a.state.handled("601"))
+        self.assertEqual(a.state.since_id, "600")  # the next search starts again from the unread one
+        before = len(self.fx.calls)
+        self.assertEqual(await a._poll_once(), 0)  # and nothing more is read today
+        self.assertEqual(len(self.fx.calls), before)
 
     async def test_daily_budget_stops_reads(self):
         a = await self.adapter(X_BOT_DAILY_BUDGET="0.01")
