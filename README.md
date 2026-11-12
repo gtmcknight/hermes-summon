@@ -62,7 +62,7 @@ The bot checks X every 20 seconds for your posts that tag it, or that reply to i
 - It sees up to 6 photos from them, and can watch their videos.
 - It answers once, under your post, in one post when the bot has X Premium. Without it, a long answer goes out as numbered replies, up to 8.
 - Images your agent makes are attached, up to 4.
-- Its reply tags nobody. Other accounts tagged in your post are left out of it, and handles are written without the @.
+- Its reply tags nobody. It asks X to leave the other accounts tagged in your post out of the reply, and it writes handles without the @.
 
 To follow up, reply to the bot. Its replies are short and plain: the answer first, one source when it settles the question, never a recap. Hermes's `SOUL.md` sets its voice everywhere, X included.
 

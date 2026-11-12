@@ -429,6 +429,26 @@ class Adapter(Base):
         self.assertEqual(sent["reply"]["exclude_reply_user_ids"], ["77"])
         self.assertEqual(guard.untag("mail me@example.com or @@x"), "mail me@example.com or @@x")
 
+    async def test_a_reply_still_posts_when_x_will_not_leave_the_others_out(self):
+        a = await self.adapter()
+        await self.summon(a)
+        self.fx.fail_reply = [400]  # X refuses the reply that leaves out the tagged account
+        res = await a.send("500", "word " * 120, reply_to="501")
+        self.assertTrue(res.success)
+        self.assertEqual(len(self.fx.replies), 1)
+        self.assertNotIn("exclude_reply_user_ids", self.fx.replies[0]["reply"])
+        self.assertEqual(a.post_limit, A.LONG_POST)  # not mistaken for X refusing a long post
+
+    async def test_a_long_post_x_refuses_with_400_still_splits_and_leaves_the_others_out(self):
+        a = await self.adapter()
+        await self.summon(a)
+        self.fx.fail_reply = [400, 400]  # refused with the others left out, and again without: it is the length
+        res = await a.send("500", "word " * 120, reply_to="501")
+        self.assertTrue(res.success)
+        self.assertEqual(a.post_limit, 280)
+        self.assertGreater(len(self.fx.replies), 1)
+        self.assertTrue(all(r["reply"].get("exclude_reply_user_ids") == ["77"] for r in self.fx.replies))
+
     async def test_a_setting_that_is_not_a_number_does_not_stop_the_bot(self):
         a = await self.adapter(X_BOT_DAILY_BUDGET="a dollar", X_BOT_POLL_SECONDS="soon")
         self.assertEqual(a.budget, 1.0)

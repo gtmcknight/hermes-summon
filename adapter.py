@@ -476,6 +476,7 @@ class XAdapter(BasePlatformAdapter):
         the summoning post tagged: they are left out of the reply, so the bot notifies nobody but its owner."""
         limit = limit or self.post_limit
         chunks = parts(text, limit) if text else [""]
+        asked = exclude  # what the caller asked to leave out, kept for the 280 retry below
         ids: list[str] = []
         for i, chunk in enumerate(chunks):
             first = media if i == 0 else None
@@ -484,7 +485,18 @@ class XAdapter(BasePlatformAdapter):
                 ids.append(f"dry-{to}-{i}")
                 continue
             try:
-                ids.append(await self.x.reply(chunk, to, exclude=exclude, media=first))
+                try:
+                    ids.append(await self.x.reply(chunk, to, exclude=exclude, media=first))
+                    continue
+                except XError as e:
+                    if not (exclude and e.status == 400):
+                        raise
+                    # X would not take the reply with the tagged accounts left out. The answer matters
+                    # more: post it as X addresses it, and stop asking for the rest of this answer.
+                    logger.warning("x: X refused a reply that left out the accounts tagged in the post (%s); "
+                                   "posting it without leaving them out", e.status)
+                    exclude = None
+                ids.append(await self.x.reply(chunk, to, media=first))
             except XError as e:
                 # The bot tried one long post and X refused it: no Premium. Split this answer at 280 and
                 # keep 280 from now on, so the next answers are written for it.
@@ -496,7 +508,7 @@ class XAdapter(BasePlatformAdapter):
                         self.state.post_limit = 280
                     if self._would_pass(len(parts(text, 280))):  # more posts than the one long post would have cost
                         raise _OverBudget()
-                    return await self._post(text, to, media, limit=280, exclude=exclude)
+                    return await self._post(text, to, media, limit=280, exclude=asked)
                 raise
         return ids
 
