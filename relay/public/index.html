@@ -37,7 +37,8 @@ h1{font-family:"Rubik Glitch","Avenir Next Condensed",sans-serif;font-size:clamp
 .install button{font:inherit;background:#fff;color:#000;border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
 .steps{margin:26px 0 0 22px;padding:0;font-size:clamp(18px,1.4vw,22px);line-height:1.45;color:var(--ink)}
 .steps li{margin:8px 0}
-.steps code,.soon code{font-family:var(--mono);font-size:.9em;background:#0007;padding:2px 7px;border-radius:6px;cursor:pointer;word-break:break-all}
+.steps code,.soon code{display:inline-block;max-width:100%;white-space:normal;font-family:var(--mono);font-size:.9em;line-height:1.2;background:#0007;padding:2px 7px;border-radius:6px;cursor:pointer;overflow-wrap:anywhere}
+.nb{white-space:nowrap}
 .cp{display:inline-block;width:16px;height:16px;margin-left:8px;vertical-align:-2px;color:#aab0ff}
 .cp.ok{color:#7ee787}
 .steps code:hover,.soon code:hover{background:#000b}
@@ -64,6 +65,7 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
  .film{width:min(100%,360px);margin:36px auto 0}
  footer{padding:0 20px 32px}
  .try{padding:8px 20px 48px}
+ .steps code,.soon code{font-size:14px}
 }
 </style>
 </head>
@@ -84,15 +86,15 @@ footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid #fff6}
   <h2>Try it in a minute</h2>
   <p class="trylead">No bot account needed during the hackathon.</p>
   <ol class="steps">
-      <li>Run <code>hermes plugins install https://github.com/gtmcknight/hermes-summon</code>. It asks for your X handle, then "Enable summon now?" Say y.</li>
-      <li>Run <code>hermes gateway setup</code>, choose <b>X</b>, pick <b>Borrow @taybotfyi</b>, enter the invite code <code>judge-hermes</code>.</li>
-      <li>Run <code>hermes gateway</code>, then reply to any post with <code>@taybotfyi is this true?</code></li>
+      <li>Run <span class="nb"><code>hermes plugins install summon</code>.</span> It asks for your X handle, then "Enable summon now?" Say y.</li>
+      <li>Run <span class="nb"><code>hermes gateway setup</code>,</span> choose <b>X</b>, pick <b>Borrow @taybotfyi</b>, enter the invite code <span class="nb"><code>judge-hermes</code>.</span></li>
+      <li>Run <span class="nb"><code>hermes gateway</code>,</span> then reply to any post with <code>@taybotfyi is this true?</code></li>
     </ol>
-    <p class="soon">Once the catalog PR merges, step one is just <code>hermes plugins install summon</code>.</p>
+    <p class="soon">If Hermes says summon is not in the catalog, run <span class="nb"><code>hermes update</code>,</span> then step one again.</p>
     <div class="links">
       <a href="https://github.com/gtmcknight/hermes-summon">Source and README</a>
+      <a href="https://hermes-agent.nousresearch.com/marketplace/summon">Hermes Marketplace</a>
       <a href="https://github.com/gtmcknight/hermes-summon#what-it-costs">Free trial, then your own X app</a>
-      <a href="https://github.com/NousResearch/hermes-agent/pull/153861">Catalog PR</a>
     </div>
   </section>
 <footer>Only you can summon your bot: it reads your posts by user ID, so strangers never reach your agent or your bill. Summons get web, images, video and skills, never your terminal or files. A Hermes Agent plugin by <a href="https://taylor.fyi">Taylor McKnight</a>.</footer>

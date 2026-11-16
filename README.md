@@ -13,10 +13,10 @@ Only you can summon it. A stranger tagging your bot never reaches your agent or 
 For the hackathon judges, or anyone with a Hermes and an X account:
 
 ```
-hermes plugins install https://github.com/gtmcknight/hermes-summon
+hermes plugins install summon
 ```
 
-It asks for your X handle, then "Enable summon now?": say y. Then:
+It asks for your X handle, then "Enable summon now?": say y. If Hermes says summon is not in the catalog, run `hermes update` and install again. Then:
 
 ```
 hermes gateway setup
@@ -36,7 +36,7 @@ You need Hermes 0.23 or newer and a second X account for the bot.
    hermes plugins install summon
    ```
 
-   Until it's in the catalog: `hermes plugins install https://github.com/gtmcknight/hermes-summon`. It asks for your X handle and offers to enable the plugin.
+   It asks for your X handle and offers to enable the plugin. On a Hermes older than 0.23.1, run `hermes update` first.
 
 2. Run setup and choose **X**. Enter your handle and pick the free trial, then open the link it prints on any device, signed in to X as the bot. No bot account yet? Pick "Borrow @taybotfyi" and enter the invite code from the hackathon entry: your Hermes answers as @taybotfyi under your own posts, 5 replies, no sign-in.
 
